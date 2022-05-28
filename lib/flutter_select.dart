@@ -25,6 +25,8 @@ class FSelect<T> extends StatefulWidget {
   final dynamic Function(T item) itemAsValue;
   final List<T> options;
   final T? value;
+  final bool? canSearch;
+  final bool Function(T item, String searchTerm)? onSearch;
 
   const FSelect({
     Key? key,
@@ -33,7 +35,9 @@ class FSelect<T> extends StatefulWidget {
     this.value,
     this.height,
     this.validate,
+    this.onSearch,
     this.labelIcon,
+    this.canSearch,
     this.background,
     this.enableInput,
     this.placeholder,
@@ -55,15 +59,16 @@ class FSelect<T> extends StatefulWidget {
 }
 
 class _InputBasicState<T> extends State<FSelect<T>> {
-  bool isPasswordVisible = false;
-  bool hasError = false;
   T? _selectedItem;
+  bool hasError = false;
+  bool _userIsSearching = false;
+  bool isPasswordVisible = false;
   late final TextEditingController _controller;
 
   @override
   void initState() {
-    _controller = TextEditingController();
     _selectedItem = widget.value;
+    _controller = TextEditingController();
 
     if (_selectedItem != null) {
       _controller.text = widget.itemAsString(_selectedItem!);
@@ -74,8 +79,7 @@ class _InputBasicState<T> extends State<FSelect<T>> {
 
   void _selectInitialValue() {
     if (widget.value == null) {
-      _controller.clear();
-      setState(() => _selectedItem = null);
+      _clearSelectedItem();
       return;
     }
 
@@ -84,8 +88,7 @@ class _InputBasicState<T> extends State<FSelect<T>> {
     );
 
     if (selected == -1) {
-      _controller.clear();
-      setState(() => _selectedItem = null);
+      _clearSelectedItem();
       return;
     }
 
@@ -163,9 +166,12 @@ class _InputBasicState<T> extends State<FSelect<T>> {
     return input;
   }
 
-  void _onTapItem(int index) {
-    final item = widget.options[index];
+  void _clearSelectedItem() {
+    _controller.clear();
+    setState(() => _selectedItem = null);
+  }
 
+  void _onTapItem(T item) {
     if (_selectedItem != null &&
         widget.itemAsValue(item) == widget.itemAsValue(_selectedItem!)) {
       Navigator.of(context).pop();
@@ -178,64 +184,50 @@ class _InputBasicState<T> extends State<FSelect<T>> {
     Navigator.of(context).pop();
   }
 
-  Widget _defaultItemBuilder(BuildContext context, int index) {
+  void _onTapContainer() async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return _ItemList(
+          options: widget.options,
+          onSearch: widget.onSearch,
+          itemBuilder:
+              widget.itemBuilder != null ? _itemBuilder : _defaultItemBuilder,
+          modalHeight: widget.modalHeight,
+          emptyBuilder: widget.emptyBuilder,
+          canSearch: widget.canSearch ?? false,
+        );
+      },
+    );
+
+    if (_userIsSearching) {
+      setState(() => _userIsSearching = false);
+    }
+  }
+
+  Widget _itemBuilder(BuildContext context, T item) {
+    final isSelected = _selectedItem != null &&
+        widget.itemAsValue(_selectedItem!) == widget.itemAsValue(item);
+
     return InkWell(
-      onTap: () => _onTapItem(index),
+      onTap: () => _onTapItem(item),
+      child: widget.itemBuilder!(context, item, isSelected),
+    );
+  }
+
+  Widget _defaultItemBuilder(BuildContext context, T item) {
+    return InkWell(
+      onTap: () => _onTapItem(item),
       child: Card(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
         ),
         child: Padding(
           padding: const EdgeInsets.all(10),
-          child: Text(widget.itemAsString(widget.options[index])),
+          child: Text(widget.itemAsString(item)),
         ),
       ),
-    );
-  }
-
-  Widget _itemBuilder(BuildContext context, int index) {
-    final option = widget.options[index];
-    final isSelected = _selectedItem != null &&
-        widget.itemAsValue(_selectedItem!) == widget.itemAsValue(option);
-
-    return InkWell(
-      onTap: () => _onTapItem(index),
-      child: widget.itemBuilder!(context, option, isSelected),
-    );
-  }
-
-  void _onTapContainer() {
-    final screenSize = MediaQuery.of(context).size;
-
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        final theme = Theme.of(context);
-        return Container(
-          color: Colors.transparent,
-          height: widget.modalHeight ?? screenSize.height * 0.4,
-          child: Container(
-            padding: const EdgeInsets.only(top: 25, bottom: 5),
-            decoration: BoxDecoration(
-              color: theme.backgroundColor,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(30.0),
-                topRight: Radius.circular(30.0),
-              ),
-            ),
-            child: widget.options.isEmpty
-                ? (widget.emptyBuilder != null
-                    ? widget.emptyBuilder!(context)
-                    : const EmptyOptions())
-                : ListView.builder(
-                    itemCount: widget.options.length,
-                    itemBuilder: widget.itemBuilder != null
-                        ? _itemBuilder
-                        : _defaultItemBuilder,
-                  ),
-          ),
-        );
-      },
     );
   }
 
@@ -267,6 +259,132 @@ class _InputBasicState<T> extends State<FSelect<T>> {
       filled: widget.background,
       hintText: widget.placeholder,
       contentPadding: const EdgeInsets.fromLTRB(20, 0, 0, 0),
+    );
+  }
+}
+
+class _ItemList<T> extends StatefulWidget {
+  const _ItemList({
+    Key? key,
+    this.onSearch,
+    this.modalHeight,
+    this.emptyBuilder,
+    required this.options,
+    required this.canSearch,
+    required this.itemBuilder,
+  }) : super(key: key);
+
+  final bool canSearch;
+  final List<T> options;
+  final double? modalHeight;
+  final bool Function(T item, String value)? onSearch;
+  final Widget Function(BuildContext context)? emptyBuilder;
+  final Widget Function(BuildContext context, T item) itemBuilder;
+
+  @override
+  State<_ItemList<T>> createState() => __ItemListState<T>();
+}
+
+class __ItemListState<T> extends State<_ItemList<T>> {
+  late List<T> _options;
+  bool _userIsSearching = false;
+
+  @override
+  void initState() {
+    _options = widget.options;
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final screenSize = MediaQuery.of(context).size;
+
+    Widget itemsList;
+
+    if (_options.isEmpty) {
+      itemsList = widget.emptyBuilder != null
+          ? widget.emptyBuilder!(context)
+          : const EmptyOptions();
+    } else {
+      itemsList = ListView.builder(
+        itemCount: _options.length,
+        itemBuilder: (context, index) => widget.itemBuilder(
+          context,
+          _options[index],
+        ),
+      );
+    }
+
+    return Container(
+      color: Colors.transparent,
+      height: widget.modalHeight ??
+          screenSize.height * (_userIsSearching ? 0.8 : 0.4),
+      child: Container(
+        padding: const EdgeInsets.only(top: 25, bottom: 5),
+        decoration: BoxDecoration(
+          color: theme.backgroundColor,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(30.0),
+            topRight: Radius.circular(30.0),
+          ),
+        ),
+        child: widget.canSearch == true && widget.options.isNotEmpty
+            ? Column(
+                children: [
+                  Container(
+                    height: 30,
+                    width: double.infinity,
+                    child: TextField(
+                      onChanged: (value) {
+                        if (value.isEmpty) {
+                          return setState(() => _options = widget.options);
+                        }
+
+                        final options = widget.options
+                            .where((e) => widget.onSearch!(e, value))
+                            .toList();
+
+                        setState(() => _options = options);
+                      },
+                      decoration: _buildSearchDecoration(),
+                      onTap: () {
+                        if (_userIsSearching == false) {
+                          setState(() => _userIsSearching = true);
+                        }
+                      },
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                  ),
+                  const SizedBox(height: 10),
+                  Expanded(child: itemsList),
+                ],
+              )
+            : itemsList,
+      ),
+    );
+  }
+
+  InputDecoration _buildSearchDecoration() {
+    return InputDecoration(
+      contentPadding: const EdgeInsets.fromLTRB(20, 8, 0, 8),
+      prefixIcon: const Icon(Icons.search),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(5),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderSide: const BorderSide(width: 2),
+        borderRadius: BorderRadius.circular(5),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderSide: const BorderSide(color: Colors.red, width: 2),
+        borderRadius: BorderRadius.circular(5),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderSide: const BorderSide(color: Colors.red, width: 2),
+        borderRadius: BorderRadius.circular(5),
+      ),
+      border: InputBorder.none,
     );
   }
 }
