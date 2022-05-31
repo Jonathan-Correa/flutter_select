@@ -4,15 +4,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_select/utils/default_values.dart';
 
 class FSelect<T> extends StatefulWidget {
+  final T? value;
   final bool readOnly;
   final String? title;
   final String? label;
   final double? height;
-  final double? modalHeight;
+  final List<T> options;
+  final bool? canSearch;
   final Icon? labelIcon;
   final bool? background;
   final bool? enableInput;
   final String? placeholder;
+  final double? modalHeight;
+  final Color? selectedColor;
   final TextStyle? labelTextStyle;
   final void Function(T? value) onChange;
   final MainAxisAlignment? labelAlignment;
@@ -23,10 +27,9 @@ class FSelect<T> extends StatefulWidget {
   final String Function(T item) itemAsString;
   final Widget Function(BuildContext context)? emptyBuilder;
   final dynamic Function(T item) itemAsValue;
-  final List<T> options;
-  final T? value;
-  final bool? canSearch;
+
   final bool Function(T item, String searchTerm)? onSearch;
+  final InputDecoration? searchDecoration;
 
   const FSelect({
     Key? key,
@@ -44,9 +47,11 @@ class FSelect<T> extends StatefulWidget {
     this.modalHeight,
     this.itemBuilder,
     this.emptyBuilder,
+    this.selectedColor,
     this.labelAlignment,
     this.labelTextStyle,
     this.onFieldSumitted,
+    this.searchDecoration,
     this.readOnly = false,
     required this.options,
     required this.onChange,
@@ -77,7 +82,7 @@ class _InputBasicState<T> extends State<FSelect<T>> {
     super.initState();
   }
 
-  void _selectInitialValue() {
+  void _selectInitialValue() async {
     if (widget.value == null) {
       _clearSelectedItem();
       return;
@@ -93,13 +98,21 @@ class _InputBasicState<T> extends State<FSelect<T>> {
     }
 
     final selectedItem = widget.options[selected];
-    _controller.text = widget.itemAsString(selectedItem);
-    setState(() => _selectedItem = selectedItem);
+    await Future.delayed(Duration.zero, () {
+      _controller.text = widget.itemAsString(selectedItem);
+    });
+
+    setState(() {
+      _selectedItem = selectedItem;
+    });
   }
 
   @override
   void didUpdateWidget(covariant FSelect<T> oldWidget) {
-    if (oldWidget.value != widget.value) {
+    if ((oldWidget.value == null && widget.value != null) ||
+        (oldWidget.value != null && widget.value == null) ||
+        (oldWidget.value != null && widget.value != null && widget.itemAsValue(oldWidget.value!) !=
+            widget.itemAsValue(widget.value!))) {
       _selectInitialValue();
     }
 
@@ -154,7 +167,7 @@ class _InputBasicState<T> extends State<FSelect<T>> {
             children: [
               if (widget.labelIcon != null) widget.labelIcon!,
               if (widget.labelIcon != null) const SizedBox(width: 3),
-              LabelText(text: widget.label!, textStyle: widget.labelTextStyle)
+              _LabelText(text: widget.label!, textStyle: widget.labelTextStyle)
             ],
           ),
           const SizedBox(height: 5),
@@ -197,6 +210,7 @@ class _InputBasicState<T> extends State<FSelect<T>> {
           modalHeight: widget.modalHeight,
           emptyBuilder: widget.emptyBuilder,
           canSearch: widget.canSearch ?? false,
+          searchDecoration: widget.searchDecoration,
         );
       },
     );
@@ -217,10 +231,19 @@ class _InputBasicState<T> extends State<FSelect<T>> {
   }
 
   Widget _defaultItemBuilder(BuildContext context, T item) {
+    final isSelected = _selectedItem != null &&
+        widget.itemAsValue(_selectedItem!) == widget.itemAsValue(item);
+    final defaultColor = Theme.of(context).primaryColor;
+
     return InkWell(
       onTap: () => _onTapItem(item),
       child: Card(
         shape: RoundedRectangleBorder(
+          side: BorderSide(
+            color: isSelected
+                ? widget.selectedColor ?? defaultColor
+                : Colors.transparent,
+          ),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Padding(
@@ -254,7 +277,7 @@ class _InputBasicState<T> extends State<FSelect<T>> {
       );
     }
 
-    return buildBasicInputDecoration(context).copyWith(
+    return buildInputBasicDecoration(context).copyWith(
       suffixIcon: suffixIcon,
       filled: widget.background,
       hintText: widget.placeholder,
@@ -270,6 +293,7 @@ class _ItemList<T> extends StatefulWidget {
     this.modalHeight,
     this.emptyBuilder,
     required this.options,
+    this.searchDecoration,
     required this.canSearch,
     required this.itemBuilder,
   }) : super(key: key);
@@ -280,6 +304,7 @@ class _ItemList<T> extends StatefulWidget {
   final bool Function(T item, String value)? onSearch;
   final Widget Function(BuildContext context)? emptyBuilder;
   final Widget Function(BuildContext context, T item) itemBuilder;
+  final InputDecoration? searchDecoration;
 
   @override
   State<_ItemList<T>> createState() => __ItemListState<T>();
@@ -332,29 +357,24 @@ class __ItemListState<T> extends State<_ItemList<T>> {
         child: widget.canSearch == true && widget.options.isNotEmpty
             ? Column(
                 children: [
-                  Container(
-                    height: 30,
-                    width: double.infinity,
-                    child: TextField(
-                      onChanged: (value) {
-                        if (value.isEmpty) {
-                          return setState(() => _options = widget.options);
-                        }
+                  _InputSearch(
+                    onChange: (value) {
+                      if (value.isEmpty) {
+                        return setState(() => _options = widget.options);
+                      }
 
-                        final options = widget.options
-                            .where((e) => widget.onSearch!(e, value))
-                            .toList();
+                      final options = widget.options
+                          .where((e) => widget.onSearch!(e, value))
+                          .toList();
 
-                        setState(() => _options = options);
-                      },
-                      decoration: _buildSearchDecoration(),
-                      onTap: () {
-                        if (_userIsSearching == false) {
-                          setState(() => _userIsSearching = true);
-                        }
-                      },
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                      setState(() => _options = options);
+                    },
+                    buildDecoration: _buildSearchDecoration,
+                    onTap: () {
+                      if (_userIsSearching == false) {
+                        setState(() => _userIsSearching = true);
+                      }
+                    },
                   ),
                   const SizedBox(height: 10),
                   Expanded(child: itemsList),
@@ -366,6 +386,8 @@ class __ItemListState<T> extends State<_ItemList<T>> {
   }
 
   InputDecoration _buildSearchDecoration() {
+    if (widget.searchDecoration != null) return widget.searchDecoration!;
+
     return InputDecoration(
       contentPadding: const EdgeInsets.fromLTRB(20, 8, 0, 8),
       prefixIcon: const Icon(Icons.search),
@@ -389,36 +411,35 @@ class __ItemListState<T> extends State<_ItemList<T>> {
   }
 }
 
-InputDecoration buildBasicInputDecoration(BuildContext context) {
-  final theme = Theme.of(context);
+class _InputSearch extends StatelessWidget {
+  const _InputSearch({
+    Key? key,
+    required this.onTap,
+    required this.onChange,
+    required this.buildDecoration,
+  }) : super(key: key);
 
-  return InputDecoration(
-    fillColor: Theme.of(context).scaffoldBackgroundColor,
-    enabledBorder: OutlineInputBorder(
-      borderSide: BorderSide(color: theme.primaryColor),
-      borderRadius: BorderRadius.circular(42.0),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderSide: BorderSide(
-        color: theme.colorScheme.primary,
-        width: 2,
+  final void Function() onTap;
+  final void Function(String) onChange;
+  final InputDecoration Function() buildDecoration;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 30,
+      width: double.infinity,
+      child: TextField(
+        onTap: onTap,
+        onChanged: onChange,
+        decoration: buildDecoration(),
       ),
-      borderRadius: BorderRadius.circular(42.0),
-    ),
-    errorBorder: OutlineInputBorder(
-      borderSide: const BorderSide(color: Colors.red, width: 2),
-      borderRadius: BorderRadius.circular(42.0),
-    ),
-    focusedErrorBorder: OutlineInputBorder(
-      borderSide: const BorderSide(color: Colors.red, width: 2),
-      borderRadius: BorderRadius.circular(42.0),
-    ),
-    border: InputBorder.none,
-  );
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+    );
+  }
 }
 
-class LabelText extends StatelessWidget {
-  const LabelText({
+class _LabelText extends StatelessWidget {
+  const _LabelText({
     this.textStyle,
     required this.text,
     Key? key,
