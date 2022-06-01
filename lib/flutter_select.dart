@@ -10,7 +10,6 @@ class FSelect<T> extends StatefulWidget {
   final String? label;
   final double? height;
   final List<T> options;
-  final bool? canSearch;
   final Icon? labelIcon;
   final bool? background;
   final bool? enableInput;
@@ -40,7 +39,6 @@ class FSelect<T> extends StatefulWidget {
     this.validate,
     this.onSearch,
     this.labelIcon,
-    this.canSearch,
     this.background,
     this.enableInput,
     this.placeholder,
@@ -69,6 +67,8 @@ class _InputBasicState<T> extends State<FSelect<T>> {
   bool _userIsSearching = false;
   bool isPasswordVisible = false;
   late final TextEditingController _controller;
+
+  bool get canSearch => widget.onSearch != null;
 
   @override
   void initState() {
@@ -111,8 +111,10 @@ class _InputBasicState<T> extends State<FSelect<T>> {
   void didUpdateWidget(covariant FSelect<T> oldWidget) {
     if ((oldWidget.value == null && widget.value != null) ||
         (oldWidget.value != null && widget.value == null) ||
-        (oldWidget.value != null && widget.value != null && widget.itemAsValue(oldWidget.value!) !=
-            widget.itemAsValue(widget.value!))) {
+        (oldWidget.value != null &&
+            widget.value != null &&
+            widget.itemAsValue(oldWidget.value!) !=
+                widget.itemAsValue(widget.value!))) {
       _selectInitialValue();
     }
 
@@ -179,8 +181,11 @@ class _InputBasicState<T> extends State<FSelect<T>> {
     return input;
   }
 
-  void _clearSelectedItem() {
-    _controller.clear();
+  void _clearSelectedItem() async {
+    await Future.delayed(Duration.zero, () {
+      _controller.clear();
+    });
+
     setState(() => _selectedItem = null);
   }
 
@@ -205,12 +210,11 @@ class _InputBasicState<T> extends State<FSelect<T>> {
         return _ItemList(
           options: widget.options,
           onSearch: widget.onSearch,
-          itemBuilder:
-              widget.itemBuilder != null ? _itemBuilder : _defaultItemBuilder,
           modalHeight: widget.modalHeight,
           emptyBuilder: widget.emptyBuilder,
-          canSearch: widget.canSearch ?? false,
           searchDecoration: widget.searchDecoration,
+          itemBuilder:
+              widget.itemBuilder != null ? _itemBuilder : _defaultItemBuilder,
         );
       },
     );
@@ -294,11 +298,9 @@ class _ItemList<T> extends StatefulWidget {
     this.emptyBuilder,
     required this.options,
     this.searchDecoration,
-    required this.canSearch,
     required this.itemBuilder,
   }) : super(key: key);
 
-  final bool canSearch;
   final List<T> options;
   final double? modalHeight;
   final bool Function(T item, String value)? onSearch;
@@ -313,6 +315,8 @@ class _ItemList<T> extends StatefulWidget {
 class __ItemListState<T> extends State<_ItemList<T>> {
   late List<T> _options;
   bool _userIsSearching = false;
+
+  bool get canSearch => widget.onSearch != null;
 
   @override
   void initState() {
@@ -354,7 +358,7 @@ class __ItemListState<T> extends State<_ItemList<T>> {
             topRight: Radius.circular(30.0),
           ),
         ),
-        child: widget.canSearch == true && widget.options.isNotEmpty
+        child: canSearch && widget.options.isNotEmpty
             ? Column(
                 children: [
                   _InputSearch(
