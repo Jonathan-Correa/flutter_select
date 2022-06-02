@@ -350,7 +350,7 @@ class __ItemListState<T> extends State<_ItemList<T>> {
       height: widget.modalHeight ??
           screenSize.height * (_userIsSearching ? 0.8 : 0.4),
       child: Container(
-        padding: const EdgeInsets.only(top: 25, bottom: 5),
+        padding: const EdgeInsets.only(top: 25, bottom: 5, left: 10, right: 10),
         decoration: BoxDecoration(
           color: theme.backgroundColor,
           borderRadius: const BorderRadius.only(
