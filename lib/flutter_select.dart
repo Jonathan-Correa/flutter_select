@@ -29,6 +29,7 @@ class FSelect<T> extends StatefulWidget {
 
   final bool Function(T item, String searchTerm)? onSearch;
   final InputDecoration? searchDecoration;
+  final InputDecoration? inputDecoration;
 
   const FSelect({
     Key? key,
@@ -49,6 +50,7 @@ class FSelect<T> extends StatefulWidget {
     this.labelAlignment,
     this.labelTextStyle,
     this.onFieldSumitted,
+    this.inputDecoration,
     this.searchDecoration,
     this.readOnly = false,
     required this.options,
@@ -150,7 +152,7 @@ class _InputBasicState<T> extends State<FSelect<T>> {
         controller: _controller,
         enabled: widget.enableInput,
         onFieldSubmitted: widget.onFieldSumitted,
-        decoration: buildInputDecoration(context),
+        decoration: _buildInputDecoration(context),
         style: TextStyle(
           height: 1.3,
           fontFamily: 'Cabin',
@@ -258,7 +260,7 @@ class _InputBasicState<T> extends State<FSelect<T>> {
     );
   }
 
-  InputDecoration buildInputDecoration(BuildContext context) {
+  InputDecoration _buildInputDecoration(BuildContext context) {
     Widget suffixIcon = const Icon(Icons.arrow_drop_down);
 
     if (_selectedItem != null) {
@@ -278,6 +280,16 @@ class _InputBasicState<T> extends State<FSelect<T>> {
             suffixIcon,
           ],
         ),
+      );
+    }
+
+    if (widget.inputDecoration != null) {
+      return widget.inputDecoration!.copyWith(
+        suffixIcon: widget.inputDecoration!.suffixIcon ?? suffixIcon,
+        filled: widget.inputDecoration!.filled ?? widget.background,
+        hintText: widget.inputDecoration!.hintText ?? widget.placeholder,
+        contentPadding: widget.inputDecoration!.contentPadding ??
+            const EdgeInsets.fromLTRB(20, 0, 0, 0),
       );
     }
 
