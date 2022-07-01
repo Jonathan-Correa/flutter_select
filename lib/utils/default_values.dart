@@ -6,7 +6,7 @@ class EmptyOptions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Center(
-      child: Text('No hay datos para mostrar'),
+      child: Text('There is no data to show!'),
     );
   }
 }
