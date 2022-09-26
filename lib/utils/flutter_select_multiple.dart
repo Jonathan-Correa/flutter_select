@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_select/utils/default_values.dart';
-import 'package:flutter_select/utils/fselect_lable.dart';
 
 class FSelectMultiple<T> extends StatefulWidget {
   final T? value;
   final double? height;
   final List<T> options;
-  final FSelectLabel? label;
   final String? placeholder;
   final double? modalHeight;
   final Color? selectedColor;
@@ -24,7 +22,6 @@ class FSelectMultiple<T> extends StatefulWidget {
 
   const FSelectMultiple({
     Key? key,
-    this.label,
     this.value,
     this.height,
     this.validate,
@@ -115,7 +112,7 @@ class _FSelectMultipleState<T> extends State<FSelectMultiple<T>> {
 
   @override
   Widget build(BuildContext context) {
-    final input = SizedBox(
+    return SizedBox(
       height: height,
       child: TextFormField(
         readOnly: true,
@@ -134,40 +131,6 @@ class _FSelectMultipleState<T> extends State<FSelectMultiple<T>> {
         decoration: _buildInputDecoration(context),
       ),
     );
-
-    if (widget.label != null) {
-      var labelAlignment = MainAxisAlignment.start;
-
-      if (widget.label!.alignment == FSelectLabelAlignment.right) {
-        labelAlignment = MainAxisAlignment.end;
-      } else if (widget.label!.alignment == FSelectLabelAlignment.center) {
-        labelAlignment = MainAxisAlignment.center;
-      }
-
-      return SizedBox(
-        height: (height * 1.55) +
-            (widget.label!.textStyle?.fontSize?.toDouble() ?? 14.0),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: labelAlignment,
-              children: [
-                if (widget.label!.icon != null) widget.label!.icon!,
-                if (widget.label!.icon != null) const SizedBox(width: 3),
-                _LabelText(
-                  text: widget.label!.text,
-                  textStyle: widget.label!.textStyle,
-                )
-              ],
-            ),
-            const SizedBox(height: 5),
-            input,
-          ],
-        ),
-      );
-    }
-
-    return input;
   }
 
   void _clearSelectedItem() async {

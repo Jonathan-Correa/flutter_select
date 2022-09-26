@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_select/utils/default_values.dart';
-import 'package:flutter_select/utils/fselect_lable.dart';
 
 class FSelect<T> extends StatefulWidget {
   final T? value;
   final double? height;
   final List<T> options;
-  final FSelectLabel? label;
   final String? placeholder;
   final double? modalHeight;
   final Color? selectedColor;
@@ -24,7 +22,6 @@ class FSelect<T> extends StatefulWidget {
 
   const FSelect({
     Key? key,
-    this.label,
     this.value,
     this.height,
     this.validate,
@@ -115,7 +112,7 @@ class _FSelectState<T> extends State<FSelect<T>> {
 
   @override
   Widget build(BuildContext context) {
-    final input = SizedBox(
+    return SizedBox(
       height: height,
       child: TextFormField(
         readOnly: true,
@@ -134,40 +131,6 @@ class _FSelectState<T> extends State<FSelect<T>> {
         decoration: _buildInputDecoration(context),
       ),
     );
-
-    if (widget.label != null) {
-      var labelAlignment = MainAxisAlignment.start;
-
-      if (widget.label!.alignment == FSelectLabelAlignment.right) {
-        labelAlignment = MainAxisAlignment.end;
-      } else if (widget.label!.alignment == FSelectLabelAlignment.center) {
-        labelAlignment = MainAxisAlignment.center;
-      }
-
-      return SizedBox(
-        height: (height * 1.55) +
-            (widget.label!.textStyle?.fontSize?.toDouble() ?? 14.0),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: labelAlignment,
-              children: [
-                if (widget.label!.icon != null) widget.label!.icon!,
-                if (widget.label!.icon != null) const SizedBox(width: 3),
-                _LabelText(
-                  text: widget.label!.text,
-                  textStyle: widget.label!.textStyle,
-                )
-              ],
-            ),
-            const SizedBox(height: 5),
-            input,
-          ],
-        ),
-      );
-    }
-
-    return input;
   }
 
   void _clearSelectedItem() async {
@@ -185,7 +148,7 @@ class _FSelectState<T> extends State<FSelect<T>> {
       return;
     }
 
-    setState(() => _selectedItem = item);
+    _selectedItem = item;
     widget.onChange(item);
     _controller.text = widget.itemAsString(item);
     Navigator.of(context).pop();
@@ -261,7 +224,7 @@ class _FSelectState<T> extends State<FSelect<T>> {
               icon: const Icon(Icons.cancel_sharp),
               onPressed: () {
                 _controller.clear();
-                setState(() => _selectedItem = null);
+                _selectedItem = null;
                 widget.onChange(null);
               },
             ),
@@ -394,7 +357,7 @@ class __ItemListState<T> extends State<_ItemList<T>> {
         borderRadius: BorderRadius.circular(5),
       ),
       focusedBorder: OutlineInputBorder(
-        borderSide: const BorderSide(width: 2),
+        borderSide: const BorderSide(width: 2, color: Colors.green),
         borderRadius: BorderRadius.circular(5),
       ),
       errorBorder: OutlineInputBorder(
@@ -433,32 +396,6 @@ class _InputSearch extends StatelessWidget {
         decoration: buildDecoration(),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 10),
-    );
-  }
-}
-
-class _LabelText extends StatelessWidget {
-  const _LabelText({
-    this.textStyle,
-    required this.text,
-    Key? key,
-  }) : super(key: key);
-
-  final String text;
-  final TextStyle? textStyle;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final sizeScreen = MediaQuery.of(context).size;
-
-    return Text(
-      text,
-      textScaleFactor: sizeScreen.width * 0.0028,
-      style: textStyle ??
-          theme.textTheme.headline6!.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
     );
   }
 }
