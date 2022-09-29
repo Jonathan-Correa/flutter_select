@@ -43,7 +43,10 @@ class FSelect<T> extends StatefulWidget {
   _FSelectState<T> createState() => _FSelectState<T>();
 }
 
-class _FSelectState<T> extends State<FSelect<T>> {
+class _FSelectState<T> extends State<FSelect<T>>
+    with AutomaticKeepAliveClientMixin<FSelect<T>> {
+  @override
+  bool get wantKeepAlive => true;
   T? _selectedItem;
   bool hasError = false;
   bool _userIsSearching = false;
@@ -134,10 +137,7 @@ class _FSelectState<T> extends State<FSelect<T>> {
   }
 
   void _clearSelectedItem() async {
-    await Future.delayed(Duration.zero, () {
-      _controller.clear();
-    });
-
+    await Future.delayed(Duration.zero, () => _controller.clear());
     setState(() => _selectedItem = null);
   }
 
@@ -236,6 +236,7 @@ class _FSelectState<T> extends State<FSelect<T>> {
 
     if (widget.inputDecoration != null) {
       return widget.inputDecoration!.copyWith(
+        contentPadding: const EdgeInsets.fromLTRB(20, 20, 0, 0),
         suffixIcon: widget.inputDecoration!.suffixIcon ?? suffixIcon,
         hintText: widget.inputDecoration!.hintText ?? widget.placeholder,
       );
