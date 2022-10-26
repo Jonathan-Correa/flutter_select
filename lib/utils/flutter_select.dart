@@ -4,6 +4,7 @@ import 'package:flutter_select/utils/default_values.dart';
 class FSelect<T> extends StatefulWidget {
   final T? value;
   final double? height;
+  final bool? readOnly;
   final List<T> options;
   final String? placeholder;
   final double? modalHeight;
@@ -26,6 +27,7 @@ class FSelect<T> extends StatefulWidget {
     this.height,
     this.validate,
     this.onSearch,
+    this.readOnly,
     this.placeholder,
     this.modalHeight,
     this.itemBuilder,
@@ -119,7 +121,7 @@ class _FSelectState<T> extends State<FSelect<T>>
       height: height,
       child: TextFormField(
         readOnly: true,
-        onTap: _onTapContainer,
+        onTap: widget.readOnly == true ? null : _onTapContainer,
         validator: (value) {
           String? message;
 
@@ -214,7 +216,7 @@ class _FSelectState<T> extends State<FSelect<T>>
   InputDecoration _buildInputDecoration(BuildContext context) {
     Widget suffixIcon = const Icon(Icons.arrow_drop_down);
 
-    if (_selectedItem != null) {
+    if (_selectedItem != null && widget.readOnly != true) {
       suffixIcon = Container(
         width: 72,
         margin: const EdgeInsets.only(right: 10),
