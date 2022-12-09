@@ -14,12 +14,12 @@ class FSelect<T> extends StatefulWidget {
   final Widget Function(BuildContext context, T item, bool isSelected)?
       itemBuilder;
   final String Function(T item) itemAsString;
-  final Widget Function(BuildContext context)? emptyBuilder;
   final dynamic Function(T item) itemAsValue;
+  final Widget Function(BuildContext context)? emptyBuilder;
 
-  final bool Function(T item, String searchTerm)? onSearch;
-  final InputDecoration? searchDecoration;
   final InputDecoration? inputDecoration;
+  final InputDecoration? searchDecoration;
+  final bool Function(T item, String searchTerm)? onSearch;
 
   const FSelect({
     Key? key,
@@ -117,6 +117,7 @@ class _FSelectState<T> extends State<FSelect<T>>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return SizedBox(
       height: height,
       child: TextFormField(
@@ -258,17 +259,17 @@ class _ItemList<T> extends StatefulWidget {
     this.onSearch,
     this.modalHeight,
     this.emptyBuilder,
-    required this.options,
     this.searchDecoration,
+    required this.options,
     required this.itemBuilder,
   }) : super(key: key);
 
   final List<T> options;
   final double? modalHeight;
+  final InputDecoration? searchDecoration;
   final bool Function(T item, String value)? onSearch;
   final Widget Function(BuildContext context)? emptyBuilder;
   final Widget Function(BuildContext context, T item) itemBuilder;
-  final InputDecoration? searchDecoration;
 
   @override
   State<_ItemList<T>> createState() => __ItemListState<T>();
