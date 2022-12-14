@@ -56,7 +56,15 @@ class _FSelectState<T> extends State<FSelect<T>>
   late final TextEditingController _controller;
 
   bool get canSearch => widget.onSearch != null;
-  double get height => (widget.height ?? 40) + (hasError ? 20 : 0);
+
+  double get height {
+    var userHeight = widget.height ?? 40;
+    userHeight = userHeight < 25 ? 25 : userHeight;
+    userHeight = userHeight > 48 ? 48 : userHeight;
+
+    /// min height = 25.0 && max height = 48.0
+    return userHeight + (hasError ? 20 : 0);
+  }
 
   @override
   void initState() {
@@ -97,12 +105,14 @@ class _FSelectState<T> extends State<FSelect<T>>
 
   @override
   void didUpdateWidget(covariant FSelect<T> oldWidget) {
-    if ((oldWidget.value == null && widget.value != null) ||
-        (oldWidget.value != null && widget.value == null) ||
-        (oldWidget.value != null &&
-            widget.value != null &&
-            widget.itemAsValue(oldWidget.value!) !=
-                widget.itemAsValue(widget.value!))) {
+    final isFirstSelection = oldWidget.value == null && widget.value != null;
+    final isClearingSelection = oldWidget.value != null && widget.value == null;
+    final isChangingSelection = oldWidget.value != null &&
+        widget.value != null &&
+        widget.itemAsValue(oldWidget.value!) !=
+            widget.itemAsValue(widget.value!);
+
+    if (isFirstSelection || isClearingSelection || isChangingSelection) {
       _selectInitialValue();
     }
 
@@ -122,19 +132,19 @@ class _FSelectState<T> extends State<FSelect<T>>
       height: height,
       child: TextFormField(
         readOnly: true,
+        controller: _controller,
+        decoration: _buildInputDecoration(context),
         onTap: widget.readOnly == true ? null : _onTapContainer,
         validator: (value) {
           String? message;
 
           if (widget.validate != null) {
             message = widget.validate!(_selectedItem);
+            setState(() => hasError = message != null);
           }
 
-          setState(() => hasError = message != null);
           return message;
         },
-        controller: _controller,
-        decoration: _buildInputDecoration(context),
       ),
     );
   }
@@ -147,8 +157,7 @@ class _FSelectState<T> extends State<FSelect<T>>
   void _onTapItem(T item) {
     if (_selectedItem != null &&
         widget.itemAsValue(item) == widget.itemAsValue(_selectedItem!)) {
-      Navigator.of(context).pop();
-      return;
+      return Navigator.of(context).pop();
     }
 
     _selectedItem = item;
@@ -193,11 +202,12 @@ class _FSelectState<T> extends State<FSelect<T>>
   Widget _defaultItemBuilder(BuildContext context, T item) {
     final isSelected = _selectedItem != null &&
         widget.itemAsValue(_selectedItem!) == widget.itemAsValue(item);
-    final defaultColor = Theme.of(context).primaryColor;
+    final defaultColor = Theme.of(context).colorScheme.primary;
 
     return InkWell(
       onTap: () => _onTapItem(item),
       child: Card(
+        color: isSelected ? widget.selectedColor ?? defaultColor : null,
         shape: RoundedRectangleBorder(
           side: BorderSide(
             color: isSelected
@@ -215,16 +225,22 @@ class _FSelectState<T> extends State<FSelect<T>>
   }
 
   InputDecoration _buildInputDecoration(BuildContext context) {
-    Widget suffixIcon = const Icon(Icons.arrow_drop_down);
+    var suffixIconsSize = (height - 20) - (hasError ? 20 : 0);
+    suffixIconsSize = suffixIconsSize < 15 ? 15 : suffixIconsSize;
+
+    Widget suffixIcon = Icon(
+      Icons.arrow_drop_down,
+      size: suffixIconsSize,
+    );
 
     if (_selectedItem != null && widget.readOnly != true) {
       suffixIcon = Container(
-        width: 72,
+        width: suffixIconsSize + 50,
         margin: const EdgeInsets.only(right: 10),
         child: Row(
           children: [
             IconButton(
-              icon: const Icon(Icons.cancel_sharp),
+              icon: Icon(Icons.cancel_sharp, size: suffixIconsSize),
               onPressed: () {
                 _controller.clear();
                 _selectedItem = null;
@@ -239,16 +255,14 @@ class _FSelectState<T> extends State<FSelect<T>>
 
     if (widget.inputDecoration != null) {
       return widget.inputDecoration!.copyWith(
-        contentPadding: const EdgeInsets.fromLTRB(20, 20, 0, 0),
         suffixIcon: widget.inputDecoration!.suffixIcon ?? suffixIcon,
         hintText: widget.inputDecoration!.hintText ?? widget.placeholder,
       );
     }
 
-    return buildInputBasicDecoration(context).copyWith(
+    return const InputDecoration().copyWith(
       suffixIcon: suffixIcon,
       hintText: widget.placeholder,
-      contentPadding: const EdgeInsets.fromLTRB(20, 0, 0, 0),
     );
   }
 }

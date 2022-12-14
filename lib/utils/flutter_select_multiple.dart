@@ -241,7 +241,7 @@ class _FSelectMultipleState<T> extends State<FSelectMultiple<T>> {
       );
     }
 
-    return buildInputBasicDecoration(context).copyWith(
+    return const InputDecoration().copyWith(
       suffixIcon: suffixIcon,
       hintText: widget.placeholder,
       contentPadding: const EdgeInsets.fromLTRB(20, 0, 0, 0),
