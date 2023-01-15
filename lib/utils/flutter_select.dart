@@ -3,14 +3,14 @@ import 'package:flutter_select/utils/default_values.dart';
 
 class FSelect<T> extends StatefulWidget {
   final T? value;
-  final double? height;
-  final bool? readOnly;
+  final double inputHeight;
+  final bool? disabled;
   final List<T> options;
   final String? placeholder;
   final double? modalHeight;
   final Color? selectedColor;
   final void Function(T? value) onChange;
-  final String? Function(T? value)? validate;
+  final String? Function(T? value)? validator;
   final Widget Function(BuildContext context, T item, bool isSelected)?
       itemBuilder;
   final String Function(T item) itemAsString;
@@ -24,16 +24,16 @@ class FSelect<T> extends StatefulWidget {
   const FSelect({
     Key? key,
     this.value,
-    this.height,
-    this.validate,
     this.onSearch,
-    this.readOnly,
+    this.disabled,
+    this.validator,
     this.placeholder,
     this.modalHeight,
     this.itemBuilder,
     this.emptyBuilder,
     this.selectedColor,
     this.inputDecoration,
+    this.inputHeight = 40,
     this.searchDecoration,
     required this.options,
     required this.onChange,
@@ -58,7 +58,7 @@ class _FSelectState<T> extends State<FSelect<T>>
   bool get canSearch => widget.onSearch != null;
 
   double get height {
-    var userHeight = widget.height ?? 40;
+    var userHeight = widget.inputHeight;
     userHeight = userHeight < 25 ? 25 : userHeight;
     userHeight = userHeight > 48 ? 48 : userHeight;
 
@@ -134,12 +134,12 @@ class _FSelectState<T> extends State<FSelect<T>>
         readOnly: true,
         controller: _controller,
         decoration: _buildInputDecoration(context),
-        onTap: widget.readOnly == true ? null : _onTapContainer,
+        onTap: widget.disabled == true ? null : _onTapContainer,
         validator: (value) {
           String? message;
 
-          if (widget.validate != null) {
-            message = widget.validate!(_selectedItem);
+          if (widget.validator != null) {
+            message = widget.validator!(_selectedItem);
             setState(() => hasError = message != null);
           }
 
@@ -228,12 +228,14 @@ class _FSelectState<T> extends State<FSelect<T>>
     var suffixIconsSize = (height - 20) - (hasError ? 20 : 0);
     suffixIconsSize = suffixIconsSize < 15 ? 15 : suffixIconsSize;
 
-    Widget suffixIcon = Icon(
-      Icons.arrow_drop_down,
-      size: suffixIconsSize,
-    );
+    Widget? suffixIcon = widget.disabled != true
+        ? Icon(
+            Icons.arrow_drop_down,
+            size: suffixIconsSize,
+          )
+        : null;
 
-    if (_selectedItem != null && widget.readOnly != true) {
+    if (_selectedItem != null && widget.disabled != true) {
       suffixIcon = Container(
         width: suffixIconsSize + 50,
         margin: const EdgeInsets.only(right: 10),
@@ -247,7 +249,7 @@ class _FSelectState<T> extends State<FSelect<T>>
                 widget.onChange(null);
               },
             ),
-            suffixIcon,
+            if (suffixIcon != null) suffixIcon,
           ],
         ),
       );
