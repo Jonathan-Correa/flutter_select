@@ -128,6 +128,7 @@ class _FSelectState<T> extends State<FSelect<T>>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+
     return SizedBox(
       height: height,
       child: TextFormField(
@@ -140,7 +141,11 @@ class _FSelectState<T> extends State<FSelect<T>>
 
           if (widget.validator != null) {
             message = widget.validator!(_selectedItem);
-            setState(() => hasError = message != null);
+            final selectHasError = message != null;
+
+            if (hasError != selectHasError) {
+              setState(() => hasError = selectHasError);
+            }
           }
 
           return message;
